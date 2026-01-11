@@ -40,10 +40,13 @@ build() {
     cd build
     
     # VC4C has multiple frontends - try to enable what's available
+    # Disable stdlib precompilation during build - it tries to write to /usr/include
     cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_TESTING=OFF
+        -DBUILD_TESTING=OFF \
+        -DVC4CL_STDLIB_DIR=/usr/include/vc4cl-stdlib \
+        -DVC4CL_STDLIB_PRECOMPILE=OFF
     
     make -j1
 }

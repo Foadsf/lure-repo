@@ -22,6 +22,7 @@ build_deps=(
     "opencl-headers"
     "ocl-icd-opencl-dev"
     "vc4c"
+    "ocl-icd-dev"
 )
 
 sources=("git+https://github.com/doe300/VC4CL.git")
@@ -46,7 +47,9 @@ build() {
     cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=Release \
-        -DMULTI_THREADED=ON
+        -DBUILD_TESTING=OFF \
+        -DBUILD_ICD=ON \
+        -DINCLUDE_COMPILER=OFF
     
     make -j1
 }
