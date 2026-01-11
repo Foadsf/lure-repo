@@ -49,7 +49,7 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_TESTING=OFF \
         -DBUILD_ICD=ON \
-        -DINCLUDE_COMPILER=OFF
+        -DINCLUDE_COMPILER=ON
     
     make -j1
 }
