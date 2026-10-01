@@ -34,16 +34,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with: {name: lure-bin, path: /usr/local/bin}
       - name: Probe package names and pre-install build deps
+        shell: bash
         run: |
           if command -v pacman >/dev/null; then pacman -Ss 'polyclipping|clipper|ngspice|quazip' | grep -v '^ ' ; fi
-          if command -v dnf >/dev/null; then dnf repoquery --qf '%{name}' 'ngspice*' 'polyclipping*' 'clipper*' 'quazip*' 2>/dev/null | sort -u; fi
+          if command -v dnf >/dev/null; then dnf repoquery --qf '%{name}\n' 'ngspice*' 'polyclipping*' 'clipper*' 'quazip*' 2>/dev/null | sort -u; fi
           d=$(. /etc/os-release; echo $ID)
           case "$d" in
             ubuntu|debian) var=build_deps_debian ;;
             fedora) var=build_deps_fedora ;;
             arch) var=build_deps_arch ;;
           esac
-          pkgs=$(bash -c "source fritzing/lure.sh; eval echo \"\\${$var[@]}\"")
+          pkgs=$(bash -c 'source fritzing/lure.sh; declare -n a=$0; echo "${a[@]}"' "$var")
           echo "pre-installing: $pkgs"
           case "$d" in
             ubuntu|debian) DEBIAN_FRONTEND=noninteractive apt-get install -y $pkgs ;;

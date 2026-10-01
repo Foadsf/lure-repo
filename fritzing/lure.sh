@@ -22,21 +22,22 @@ _partsrev='27535f2fd02097be9bed229b75aa8e9be282a4a0'
 # The Debian/Ubuntu and Fedora lists name the -dev/-devel packages in deps as
 # well: LURE does not generate shared-library dependencies, and the library
 # package names there carry soname or t64 suffixes that differ between releases.
-deps_arch=('glibc' 'libgcc' 'libgit2' 'libstdc++' 'polyclipping' 'qt6-base' 'qt6-serialport' 'qt6-svg' 'quazip-qt6' 'ngspice' 'zlib')
-build_deps_arch=('boost' 'git' 'patchelf' 'qt6-tools' 'gcc' 'make' 'glibc' 'libgit2' 'polyclipping' 'qt6-base' 'qt6-serialport' 'qt6-svg' 'quazip-qt6' 'ngspice' 'zlib')
+deps_arch=('glibc' 'libgcc' 'libgit2' 'libstdc++' 'qt6-base' 'qt6-serialport' 'qt6-svg' 'quazip-qt6' 'ngspice' 'zlib')
+build_deps_arch=('boost' 'git' 'patchelf' 'qt6-tools' 'gcc' 'make' 'glibc' 'libgit2' 'qt6-base' 'qt6-serialport' 'qt6-svg' 'quazip-qt6' 'ngspice' 'zlib')
 
 deps_debian=('libgit2-dev' 'libpolyclipping-dev' 'libngspice0-dev' 'libquazip1-qt6-dev' 'qt6-base-dev' 'qt6-svg-dev' 'qt6-serialport-dev' 'libqt6sql6-sqlite' 'zlib1g-dev')
 build_deps_debian=('g++' 'make' 'git' 'patchelf' 'pkg-config' 'libboost-dev' 'libgit2-dev' 'libpolyclipping-dev' 'libngspice0-dev' 'libquazip1-qt6-dev' 'qt6-base-dev' 'qt6-base-dev-tools' 'qt6-svg-dev' 'qt6-serialport-dev' 'qt6-tools-dev' 'qt6-l10n-tools' 'qt6-5compat-dev' 'libqt6sql6-sqlite' 'libgl-dev' 'zlib1g-dev')
 
-deps_fedora=('libgit2-devel' 'polyclipping-devel' 'ngspice-devel' 'quazip-qt6-devel' 'qt6-qtbase-devel' 'qt6-qtsvg-devel' 'qt6-qtserialport-devel' 'zlib-devel')
-build_deps_fedora=('gcc-c++' 'make' 'git' 'patchelf' 'pkgconf' 'boost-devel' 'libgit2-devel' 'polyclipping-devel' 'ngspice-devel' 'quazip-qt6-devel' 'qt6-qtbase-devel' 'qt6-qtsvg-devel' 'qt6-qtserialport-devel' 'qt6-qttools-devel' 'qt6-qt5compat-devel' 'mesa-libGL-devel' 'zlib-devel')
+deps_fedora=('libgit2-devel' 'polyclipping-devel' 'ngspice' 'ngspice-codemodel' 'quazip-qt6-devel' 'qt6-qtbase-devel' 'qt6-qtsvg-devel' 'qt6-qtserialport-devel' 'zlib-devel')
+build_deps_fedora=('gcc-c++' 'make' 'git' 'patchelf' 'pkgconf' 'boost-devel' 'libgit2-devel' 'polyclipping-devel' 'ngspice' 'ngspice-codemodel' 'quazip-qt6-devel' 'qt6-qtbase-devel' 'qt6-qtsvg-devel' 'qt6-qtserialport-devel' 'qt6-qttools-devel' 'qt6-qt5compat-devel' 'mesa-libGL-devel' 'zlib-devel')
 
 sources=(
 	"git+https://github.com/fritzing/fritzing-app.git?~rev=${_gitrev}"
 	"git+https://github.com/fritzing/fritzing-parts.git?~rev=${_partsrev}"
 	'https://github.com/svgpp/svgpp/archive/refs/tags/v1.3.1.tar.gz'
+	'https://github.com/skyrpex/clipper/archive/b1f1e1672745c1e1d73dd0437d1643f9633e7508.tar.gz'
 )
-checksums=('SKIP' 'SKIP' 'be8a89df72d01cf062cc9815dd64c9576b4d20910d6d7aee7f0ea26484dc5e76')
+checksums=('SKIP' 'SKIP' 'be8a89df72d01cf062cc9815dd64c9576b4d20910d6d7aee7f0ea26484dc5e76' '05e2cb91ac928400bb38179242f445dc35962b1903004a4b50aacc9890111089')
 
 prepare() {
 	cd "${srcdir}/fritzing-app"
@@ -69,15 +70,27 @@ prepare() {
 		INCLUDEPATH += ${ngspice_inc}
 	EOF
 
-	if [ ! -f /usr/include/polyclipping/clipper.hpp ]; then
-		echo "polyclipping headers not found in /usr/include/polyclipping" >&2
-		return 1
+	# polyclipping is not in Arch's official repositories (AUR only), so the
+	# library is compiled into the application from a pinned source tree when
+	# the system does not provide it.
+	if [ -f /usr/include/polyclipping/clipper.hpp ]; then
+		cat >pri/clipper1detect.pri <<-EOF
+			message("including the system polyclipping library")
+			INCLUDEPATH += /usr/include/polyclipping
+			LIBS += -lpolyclipping
+		EOF
+	else
+		clipper_cpp=$(find "${srcdir}" -path '*/clipper-*/cpp/clipper.cpp' | head -n 1)
+		if [ -z "${clipper_cpp}" ]; then
+			echo "Clipper1 sources not found under ${srcdir}" >&2
+			return 1
+		fi
+		cat >pri/clipper1detect.pri <<-EOF
+			message("compiling the bundled Clipper1 sources")
+			INCLUDEPATH += $(dirname "${clipper_cpp}")
+			SOURCES += ${clipper_cpp}
+		EOF
 	fi
-	cat >pri/clipper1detect.pri <<-EOF
-		message("including the system polyclipping library")
-		INCLUDEPATH += /usr/include/polyclipping
-		LIBS += -lpolyclipping
-	EOF
 
 	# quazip's headers pull in Qt5Compat, and this lifts the Qt version window
 	# (the AUR does both through patches 0001 and 0004).
