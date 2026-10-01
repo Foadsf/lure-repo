@@ -32,6 +32,8 @@ jobs:
           useradd -m -s /bin/bash builder
           echo 'builder:builder' | chpasswd
           chage -E -1 -M -1 builder || true
+          # CI container only: Fedora's sudo fails PAM account checks for the throwaway user
+          [ -f /etc/pam.d/sudo ] && sed -i '1i account sufficient pam_permit.so' /etc/pam.d/sudo || true
           echo 'builder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/builder
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
