@@ -1,5 +1,7 @@
 name: test-fritzing
-on: workflow_dispatch
+on:
+  push:
+    branches: [ci-test-fritzing]
 jobs:
   lure:
     runs-on: ubuntu-latest
