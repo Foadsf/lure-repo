@@ -39,6 +39,11 @@ sources=(
 )
 checksums=('SKIP' 'SKIP' 'be8a89df72d01cf062cc9815dd64c9576b4d20910d6d7aee7f0ea26484dc5e76' '05e2cb91ac928400bb38179242f445dc35962b1903004a4b50aacc9890111089')
 
+# Fedora ships no ngspice development headers, so the one header Fritzing needs
+# (sharedspice.h) comes from the matching ngspice release.
+sources_fedora=("${sources[@]}" 'https://github.com/imr/ngspice/archive/refs/tags/ngspice-42.tar.gz')
+checksums_fedora=("${checksums[@]}" 'd6e566aa72bd289ca9a4f985ab0bcace4e5530fe9e970e18f2f9e99715f96174')
+
 prepare() {
 	cd "${srcdir}/fritzing-app"
 
@@ -60,14 +65,17 @@ prepare() {
 		LIBS += -lquazip1-qt6
 	EOF
 
-	ngspice_inc=$(dirname "$(dirname "$(find /usr/include -name sharedspice.h | head -n 1)")")
-	if [ ! -f "${ngspice_inc}/ngspice/sharedspice.h" ]; then
-		echo "ngspice headers (sharedspice.h) not found under /usr/include" >&2
+	ngspice_h=$(find /usr/include -name sharedspice.h 2>/dev/null | head -n 1)
+	if [ -z "${ngspice_h}" ]; then
+		ngspice_h=$(find "${srcdir}" -path '*/src/include/ngspice/sharedspice.h' | head -n 1)
+	fi
+	if [ -z "${ngspice_h}" ]; then
+		echo "ngspice headers (sharedspice.h) not found" >&2
 		return 1
 	fi
 	cat >pri/spicedetect.pri <<-EOF
-		message("including the system ngspice headers")
-		INCLUDEPATH += ${ngspice_inc}
+		message("including ngspice headers from ${ngspice_h}")
+		INCLUDEPATH += $(dirname "$(dirname "${ngspice_h}")")
 	EOF
 
 	# polyclipping is not in Arch's official repositories (AUR only), so the
