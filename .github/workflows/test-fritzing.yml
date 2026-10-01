@@ -29,7 +29,8 @@ jobs:
           if command -v apt-get >/dev/null; then apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y sudo git ca-certificates curl; fi
           if command -v pacman >/dev/null; then pacman -Syu --noconfirm sudo git base-devel; fi
           if command -v dnf >/dev/null; then dnf install -y sudo git; fi
-          useradd -m builder
+          useradd -m -s /bin/bash builder
+          passwd -d builder || true
           echo 'builder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/builder
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
