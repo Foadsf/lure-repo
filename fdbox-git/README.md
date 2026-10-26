@@ -45,34 +45,34 @@ version() {
 }
 ```
 
-**Correct:**
+**Correct:** use LURE's `git-version` helper, as the [package conventions](https://github.com/lure-sh/lure/blob/master/docs/packages/conventions.md#git-packages) require for `-git` packages:
 ```bash
 version() {
     cd "$srcdir/fdbox"
-    # Prefix with 0.0.0 to satisfy Debian's digit-first requirement
-    printf "0.0.0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+    git-version
 }
 ```
 
-**Result:** `0.0.0.r282.6acbada` — starts with a digit, Debian-compliant.
+**Result:** `282.6acbada` — revision count, then short hash. It starts with a digit, so Debian accepts it, and it uses LURE's embedded Git, so users don't need Git installed to compute it. Don't add an `r` or a `0.0.0.` prefix: the convention omits the `r` precisely because some package managers reject versions that don't start with a digit.
 
-### 2. Fallback Installation When No `make install` Target Exists
+### 2. Projects Without an `install` Target
 
-**Problem:** Many small projects don't define an `install` target in their CMakeLists.txt.
+**Problem:** fdbox's CMakeLists.txt defines no `install()` rules, so `make install` always fails with `No rule to make target 'install'`.
 
-**Solution:** Use `||` to fall back to manual installation:
+**Solution:** install the binary directly with LURE's `install-binary` helper, which places it in `/usr/bin` with mode 755:
 ```bash
 package() {
-    cd "$srcdir/fdbox/build"
-    make DESTDIR="$pkgdir" install || install -Dm755 fdbox "$pkgdir/usr/bin/fdbox"
+    install-binary "$srcdir/fdbox/build/fdbox"
 }
 ```
 
-This tries `make install` first, and if it fails, manually installs the binary with correct permissions (755) to `/usr/bin/`.
+Avoid `make install || install ...`: when the target never exists, the first command only adds an error to every build log.
 
 ### 3. CMake in `prepare()` vs `build()`
 
-**Why CMake runs in `prepare()`:** The CMake configure step downloads dependencies via CPM (CMake Package Manager) and requires internet access. LURE's `prepare()` phase is designed for tasks requiring network access, while `build()` should work offline.
+**Why CMake runs in `prepare()`:** The CMake configure step downloads dependencies via CPM (CMake Package Manager), which needs Git and internet access. Keeping configuration in `prepare()` and compilation in `build()` separates the network step from the compile step. `build()` builds only the `fdbox` target, skipping upstream's `tests` executable.
+
+Python is not a build dependency: Format.cmake only uses it for optional clang-format targets and adds dummy targets when it is missing.
 
 ### 4. Git Source Syntax
 
@@ -87,7 +87,7 @@ checksums=("SKIP")  # Git sources use SKIP for checksum
 | Format | Valid? | Example |
 |--------|--------|---------|
 | `r123.abc1234` | ❌ No | Starts with letter |
-| `0.0.0.r123.abc1234` | ✅ Yes | Starts with digit |
+| `123.abc1234` | ✅ Yes | LURE `-git` convention (`git-version`) |
 | `1.0.0` | ✅ Yes | Standard semver |
 | `2024.01.15` | ✅ Yes | Date-based |
 | `0~git20260109` | ✅ Yes | Pre-release with tilde |
@@ -97,9 +97,10 @@ checksums=("SKIP")  # Git sources use SKIP for checksum
 ```
 fdbox-git/
 ├── lure.sh          # LURE build script
-├── README.md        # This file
-└── *.deb            # Generated package (after build)
+└── README.md        # This file
 ```
+
+`lure build` writes the generated `.deb` to the current directory; don't commit it.
 
 ## References
 
