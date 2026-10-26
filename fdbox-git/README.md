@@ -9,8 +9,8 @@ Think of it as a nostalgic bridge for those who grew up with DOS, or an educatio
 ### Features
 
 - FreeDOS-compatible command syntax
-- Built-in commands: `dir`, `cd`, `cls`, `copy`, `del`, `echo`, `exit`, `md`, `rd`, `type`, `ver`, etc.
-- Some Unix utilities: `cal`, `head`, `tail`, `hexdump`
+- Built-in commands: `dir`, `cd`, `cls`, `copy`, `move`, `del`, `mkdir`, `type`, `echo`, `set`, `date`, `time`, `ver`, `exit`, etc. Run `fdbox help` for the full list.
+- Run a single command with `fdbox <command> [args]`, or start the interactive shell with `fdbox`
 - Lightweight C implementation
 - Cross-platform (Linux, Windows)
 
